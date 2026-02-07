@@ -20,9 +20,15 @@ async function initialize() {
 
   /* Step 2 - Inject content script into active tab */
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  const currentTabId = tabs?.[0]?.id;
+  const currentTab = tabs?.[0];
+  const currentTabId = currentTab?.id;
   if (!currentTabId) {
-    console.error(`[popup] cannot get model. Activie tab does not exist.`);
+    console.error(`[popup] cannot get model. Active tab does not exist.`);
+    return;
+  }
+
+  const url = currentTab.url ?? "";
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
     return;
   }
 
