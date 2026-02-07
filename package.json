@@ -9,7 +9,7 @@
     "build": "rm -rf dist && concurrently --raw npm:build:* && npm run pack",
     "dev:pages": "npm run build:pages -- --watch",
     "dev:assets": "npm run build:assets -- --watch",
-    "build:pages": "esbuild src/content-script.ts src/options.ts src/popup.ts --format=esm --sourcemap --bundle --outdir=dist/unpacked",
+    "build:pages": "esbuild src/content-script.ts src/options.ts src/popup.ts src/background.ts --format=esm --sourcemap --bundle --outdir=dist/unpacked",
     "build:assets": "node scripts/copy-assets.js --src public --target dist/unpacked",
     "pack": "node scripts/pack.js --dir dist/unpacked",
     "test": "tsx src/index.tests.ts",

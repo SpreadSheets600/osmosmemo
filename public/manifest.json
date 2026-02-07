@@ -1,6 +1,6 @@
 {
   "name": "Memo",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "An in-browser bookmark manager with GitHub backend",
   "manifest_version": 3,
   "action": {
@@ -11,6 +11,10 @@
       "24": "assets/osmosmemo-icon-24.png",
       "32": "assets/osmosmemo-icon-32.png"
     }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
   },
   "options_ui": {
     "page": "options.html"
@@ -23,7 +27,11 @@
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "alarms"
+  ],
+  "optional_permissions": [
+    "bookmarks"
   ],
   "commands": {
     "_execute_action": {
