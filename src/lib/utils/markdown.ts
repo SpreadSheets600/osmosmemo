@@ -29,3 +29,12 @@ export function parseEntry(markdown: string): ParsedEntry | null {
 
   return { title, href, tags, description };
 }
+
+/** Parse all bookmark entries from a full markdown string */
+export function parseAllEntries(markdownString: string): ParsedEntry[] {
+  return markdownString
+    .split("\n")
+    .filter((line) => line.startsWith("- ["))
+    .map((line) => parseEntry(line))
+    .filter((entry): entry is ParsedEntry => entry !== null);
+}
