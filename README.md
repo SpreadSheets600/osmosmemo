@@ -1,3 +1,4 @@
+- [SpreadSheets600/osmosmemo](https://github.com/SpreadSheets600/osmosmemo) Testing Smth #test
 - [Flames](https://flames.blue/) #ai-tools#bookmarks-bar
 - [Pomelli ](https://labs.google.com/pomelli/about/) #ai-tools#bookmarks-bar
 - [Google Stich](https://stitch.withgoogle.com/?pli=1) #ai-tools#bookmarks-bar
