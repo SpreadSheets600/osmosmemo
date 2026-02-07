@@ -28,7 +28,7 @@ async function collectBrowserBookmarks(folderId: string): Promise<{ title: strin
   return results;
 }
 
-async function syncBookmarks(markdownString?: string): Promise<SyncResult> {
+async function syncBookmarks(): Promise<SyncResult> {
   if (syncing) {
     return { status: "skipped", message: "Sync already in progress" };
   }
@@ -69,81 +69,28 @@ async function syncBookmarks(markdownString?: string): Promise<SyncResult> {
       targetFolderId = bookmarksBar.id;
     }
 
-    // Step 1: Fetch current GitHub file content
-    if (!markdownString) {
-      markdownString = await getContentString({ accessToken, username, repo, filename });
+    const browserBookmarks = await collectBrowserBookmarks(targetFolderId);
+    if (browserBookmarks.length === 0) {
+      return { status: "skipped", message: "No bookmarks found in browser" };
     }
+
+    const markdownString = await getContentString({ accessToken, username, repo, filename });
     const fileEntries = parseAllEntries(markdownString);
     const fileUrls = new Set(fileEntries.map((e) => e.href));
 
-    // Step 2: Collect browser bookmarks from target folder
-    const browserBookmarks = await collectBrowserBookmarks(targetFolderId);
-    const browserUrls = new Set(browserBookmarks.map((b) => b.url));
-
-    // Step 3: Import browser bookmarks not in file → push to GitHub
     const newFromBrowser = browserBookmarks.filter((b) => !fileUrls.has(b.url));
-    let imported = 0;
-    if (newFromBrowser.length > 0) {
-      const newLines = newFromBrowser.map((b) => bookmarkToMarkdownEntry(b.title, b.url)).join("\n");
-      markdownString = await updateContent(
-        { accessToken, username, repo, filename, message: `sync: import ${newFromBrowser.length} browser bookmarks` },
-        (existing) => newLines + (existing ? "\n" + existing : "")
-      );
-      imported = newFromBrowser.length;
-      // Re-parse after update
-      const updatedEntries = parseAllEntries(markdownString);
-      fileUrls.clear();
-      for (const e of updatedEntries) fileUrls.add(e.href);
-      fileEntries.length = 0;
-      fileEntries.push(...updatedEntries);
+
+    if (newFromBrowser.length === 0) {
+      return { status: "ok", message: `${browserBookmarks.length} bookmarks already in sync` };
     }
 
-    // Step 4: Sync file entries → browser bookmarks bar
-    const currentChildren = await chrome.bookmarks.getChildren(targetFolderId);
-    const existingByUrl = new Map<string, chrome.bookmarks.BookmarkTreeNode>();
-    for (const child of currentChildren) {
-      if (child.url) {
-        existingByUrl.set(child.url, child);
-      }
-    }
+    const newLines = newFromBrowser.map((b) => bookmarkToMarkdownEntry(b.title, b.url)).join("\n");
+    await updateContent(
+      { accessToken, username, repo, filename, message: `sync: import ${newFromBrowser.length} browser bookmarks` },
+      (existing) => newLines + (existing ? "\n" + existing : "")
+    );
 
-    let created = 0;
-    let updated = 0;
-    let removed = 0;
-
-    for (const entry of fileEntries) {
-      const existing = existingByUrl.get(entry.href);
-      if (existing) {
-        if (existing.title !== entry.title) {
-          await chrome.bookmarks.update(existing.id, { title: entry.title });
-          updated++;
-        }
-      } else {
-        await chrome.bookmarks.create({ parentId: targetFolderId, title: entry.title, url: entry.href });
-        created++;
-      }
-    }
-
-    // In folder mode, remove stale bookmarks from folder
-    if (options.bookmarksSyncMode === "folder") {
-      const desiredUrls = new Set(fileEntries.map((e) => e.href));
-      for (const [url, node] of existingByUrl) {
-        if (!desiredUrls.has(url)) {
-          await chrome.bookmarks.remove(node.id);
-          removed++;
-        }
-      }
-    }
-
-    const parts: string[] = [];
-    if (imported > 0) parts.push(`${imported} imported from browser`);
-    if (created > 0) parts.push(`${created} added to bar`);
-    if (updated > 0) parts.push(`${updated} updated`);
-    if (removed > 0) parts.push(`${removed} removed`);
-    const total = fileEntries.length;
-    const detail = parts.length > 0 ? parts.join(", ") : "already in sync";
-    const msg = `${total} bookmarks synced (${detail})`;
-    return { status: "ok", message: msg };
+    return { status: "ok", message: `Synced ${newFromBrowser.length} new bookmarks to GitHub` };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("[background] sync failed", error);
@@ -187,7 +134,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "SYNC_BOOKMARKS_NOW") {
-    syncBookmarks(message.markdownString).then((result) => sendResponse(result));
+    syncBookmarks().then((result) => sendResponse(result));
     return true;
   }
 
