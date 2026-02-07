@@ -12,6 +12,8 @@ const usernameElement = document.querySelector(".js-username") as HTMLInputEleme
 const repoElement = document.querySelector(".js-repo") as HTMLInputElement;
 const filenameElement = document.querySelector(".js-filename") as HTMLInputElement;
 const syncToggleElement = document.querySelector(".js-sync-toggle") as HTMLInputElement;
+const syncModeFieldElement = document.querySelector(".js-sync-mode-field") as HTMLElement;
+const syncModeElement = document.querySelector(".js-sync-mode") as HTMLSelectElement;
 const syncIntervalFieldElement = document.querySelector(".js-sync-interval-field") as HTMLElement;
 const syncIntervalElement = document.querySelector(".js-sync-interval") as HTMLInputElement;
 const syncNowElement = document.querySelector(".js-sync-now") as HTMLButtonElement;
@@ -22,7 +24,7 @@ function renderInputField({ element, string }) {
 }
 
 async function renderAllFields() {
-  const { accessToken, username, repo, filename, syncToBookmarksBar, bookmarksSyncIntervalMinutes } = await getUserOptions();
+  const { accessToken, username, repo, filename, syncToBookmarksBar, bookmarksSyncMode, bookmarksSyncIntervalMinutes } = await getUserOptions();
 
   renderInputField({ element: accessTokenElement, string: accessToken });
   renderInputField({ element: usernameElement, string: username });
@@ -30,11 +32,13 @@ async function renderAllFields() {
   renderInputField({ element: filenameElement, string: filename });
 
   syncToggleElement.checked = syncToBookmarksBar;
+  syncModeElement.value = bookmarksSyncMode;
   syncIntervalElement.value = bookmarksSyncIntervalMinutes > 0 ? String(bookmarksSyncIntervalMinutes) : "";
   updateSyncUI(syncToBookmarksBar);
 }
 
 function updateSyncUI(enabled: boolean) {
+  syncModeFieldElement.style.display = enabled ? "" : "none";
   syncIntervalFieldElement.style.display = enabled ? "" : "none";
   syncNowElement.style.display = enabled ? "" : "none";
 }
@@ -107,14 +111,20 @@ syncToggleElement.addEventListener("change", async () => {
 
   if (wantEnabled) {
     syncStatusElement.innerText = "Syncing...";
-    chrome.runtime.sendMessage({ type: "SYNC_BOOKMARKS_NOW" }).then(() => {
-      syncStatusElement.innerText = "Synced";
-    }).catch(() => {
-      syncStatusElement.innerText = "Sync failed";
+    chrome.runtime.sendMessage({ type: "SYNC_BOOKMARKS_NOW" }).then((result) => {
+      syncStatusElement.innerText = result?.message ?? "Done";
+    }).catch((e) => {
+      syncStatusElement.innerText = `Sync failed: ${e.message ?? e}`;
     });
   } else {
     syncStatusElement.innerText = "";
   }
+});
+
+syncModeElement.addEventListener("change", async () => {
+  const mode = syncModeElement.value as "bar" | "folder";
+  await setUserOptions({ bookmarksSyncMode: mode });
+  chrome.runtime.sendMessage({ type: "SYNC_SETTINGS_CHANGED" });
 });
 
 syncIntervalElement.addEventListener("change", async () => {
@@ -126,9 +136,9 @@ syncIntervalElement.addEventListener("change", async () => {
 syncNowElement.addEventListener("click", async () => {
   syncStatusElement.innerText = "Syncing...";
   try {
-    await chrome.runtime.sendMessage({ type: "SYNC_BOOKMARKS_NOW" });
-    syncStatusElement.innerText = "Synced";
-  } catch {
-    syncStatusElement.innerText = "Sync failed";
+    const result = await chrome.runtime.sendMessage({ type: "SYNC_BOOKMARKS_NOW" });
+    syncStatusElement.innerText = result?.message ?? "Done";
+  } catch (e: any) {
+    syncStatusElement.innerText = `Sync failed: ${e.message ?? e}`;
   }
 });

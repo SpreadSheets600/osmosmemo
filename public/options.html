@@ -72,6 +72,13 @@
             </label>
           </div>
         </div>
+        <div class="field js-sync-mode-field" style="margin-top:8px;display:none;">
+          <label for="sync-mode" class="field__label">Sync destination</label>
+          <select id="sync-mode" class="js-sync-mode field__input" style="height:var(--standard-control-height);font-size:14px;">
+            <option value="bar">Bookmarks bar (all bookmarks directly)</option>
+            <option value="folder">osmosmemo folder (in bookmarks bar)</option>
+          </select>
+        </div>
         <div class="field js-sync-interval-field" style="margin-top:8px;display:none;">
           <label for="sync-interval" class="field__label">Sync interval (minutes)</label>
           <input id="sync-interval" class="js-sync-interval field__input" type="number" min="1" max="1440" placeholder="e.g. 30 (0 = manual only)" />
