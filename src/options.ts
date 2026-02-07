@@ -11,18 +11,32 @@ const tagCountElement = document.querySelector(".js-tag-count") as HTMLElement;
 const usernameElement = document.querySelector(".js-username") as HTMLInputElement;
 const repoElement = document.querySelector(".js-repo") as HTMLInputElement;
 const filenameElement = document.querySelector(".js-filename") as HTMLInputElement;
+const syncToggleElement = document.querySelector(".js-sync-toggle") as HTMLInputElement;
+const syncIntervalFieldElement = document.querySelector(".js-sync-interval-field") as HTMLElement;
+const syncIntervalElement = document.querySelector(".js-sync-interval") as HTMLInputElement;
+const syncNowElement = document.querySelector(".js-sync-now") as HTMLButtonElement;
+const syncStatusElement = document.querySelector(".js-sync-status") as HTMLSpanElement;
 
 function renderInputField({ element, string }) {
   element.value = string;
 }
 
 async function renderAllFields() {
-  const { accessToken, username, repo, filename } = await getUserOptions();
+  const { accessToken, username, repo, filename, syncToBookmarksBar, bookmarksSyncIntervalMinutes } = await getUserOptions();
 
   renderInputField({ element: accessTokenElement, string: accessToken });
   renderInputField({ element: usernameElement, string: username });
   renderInputField({ element: repoElement, string: repo });
   renderInputField({ element: filenameElement, string: filename });
+
+  syncToggleElement.checked = syncToBookmarksBar;
+  syncIntervalElement.value = bookmarksSyncIntervalMinutes > 0 ? String(bookmarksSyncIntervalMinutes) : "";
+  updateSyncUI(syncToBookmarksBar);
+}
+
+function updateSyncUI(enabled: boolean) {
+  syncIntervalFieldElement.style.display = enabled ? "" : "none";
+  syncNowElement.style.display = enabled ? "" : "none";
 }
 
 renderAllFields();
@@ -74,3 +88,47 @@ function showConditionalElements(condition: "on-success" | "on-error") {
     }
   });
 }
+
+syncToggleElement.addEventListener("change", async () => {
+  const wantEnabled = syncToggleElement.checked;
+
+  if (wantEnabled) {
+    const granted = await chrome.permissions.request({ permissions: ["bookmarks"] });
+    if (!granted) {
+      syncToggleElement.checked = false;
+      syncStatusElement.innerText = "Permission denied";
+      return;
+    }
+  }
+
+  await setUserOptions({ syncToBookmarksBar: wantEnabled });
+  updateSyncUI(wantEnabled);
+  chrome.runtime.sendMessage({ type: "SYNC_SETTINGS_CHANGED" });
+
+  if (wantEnabled) {
+    syncStatusElement.innerText = "Syncing...";
+    chrome.runtime.sendMessage({ type: "SYNC_BOOKMARKS_NOW" }).then(() => {
+      syncStatusElement.innerText = "Synced";
+    }).catch(() => {
+      syncStatusElement.innerText = "Sync failed";
+    });
+  } else {
+    syncStatusElement.innerText = "";
+  }
+});
+
+syncIntervalElement.addEventListener("change", async () => {
+  const minutes = parseInt(syncIntervalElement.value) || 0;
+  await setUserOptions({ bookmarksSyncIntervalMinutes: minutes });
+  chrome.runtime.sendMessage({ type: "SYNC_SETTINGS_CHANGED" });
+});
+
+syncNowElement.addEventListener("click", async () => {
+  syncStatusElement.innerText = "Syncing...";
+  try {
+    await chrome.runtime.sendMessage({ type: "SYNC_BOOKMARKS_NOW" });
+    syncStatusElement.innerText = "Synced";
+  } catch {
+    syncStatusElement.innerText = "Sync failed";
+  }
+});
