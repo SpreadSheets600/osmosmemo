@@ -80,6 +80,7 @@ export class Controller {
       );
       const updatedContent = await updateContent({ accessToken, username, repo, filename, message }, mergeWithExisting);
       this.model.update({ saveStatus: "saved", markdownString: updatedContent, isSaved: true });
+      chrome.runtime.sendMessage({ type: "SYNC_BOOKMARKS_NOW", markdownString: updatedContent }).catch(() => {});
     } catch {
       this.model.update({ saveStatus: "error" });
     }
