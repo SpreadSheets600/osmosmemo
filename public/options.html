@@ -61,6 +61,26 @@
           <textarea id="tags" class="js-tags field__input" readonly rows="1"></textarea>
         </div>
       </div>
+      <div data-show="on-success">
+        <hr />
+        <div class="field">
+          <label class="field__label">Bookmarks Bar Sync</label>
+          <div class="field__input">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:normal;font-size:14px;">
+              <input type="checkbox" class="js-sync-toggle" />
+              Sync bookmarks to browser bookmarks bar
+            </label>
+          </div>
+        </div>
+        <div class="field js-sync-interval-field" style="margin-top:8px;display:none;">
+          <label for="sync-interval" class="field__label">Sync interval (minutes)</label>
+          <input id="sync-interval" class="js-sync-interval field__input" type="number" min="1" max="1440" placeholder="e.g. 30 (0 = manual only)" />
+        </div>
+        <div style="margin-top:8px;">
+          <button type="button" class="js-sync-now" style="display:none;">🔄 Sync now</button>
+          <span class="js-sync-status" style="font-size:12px;margin-left:8px;"></span>
+        </div>
+      </div>
       <div data-show="on-error">
         <div class="trouble-shooting-title">Having trouble? Check these:</div>
         <ul class="trouble-shooting-list">
